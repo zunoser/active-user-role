@@ -1,0 +1,40 @@
+name: Active Role
+
+on:
+  schedule:
+    # GitHub Actions cron uses UTC. This runs at 00:00 JST.
+    - cron: "0 15 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: active-role
+  cancel-in-progress: false
+
+jobs:
+  assign-active-role:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8
+        with:
+          enable-cache: true
+          quiet: true
+
+      - name: Set up Python
+        run: uv python install 3.14 --quiet >/dev/null 2>&1
+
+      - name: Install dependencies
+        run: uv sync --locked --no-dev --quiet >/dev/null 2>&1
+
+      - name: Assign active role
+        run: uv run --quiet python main.py >/dev/null 2>&1
