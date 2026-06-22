@@ -28,7 +28,6 @@ jobs:
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
         with:
           enable-cache: true
-          quiet: true
 
       - name: Set up Python
         run: uv python install 3.14 --quiet >/dev/null 2>&1
