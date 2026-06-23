@@ -50,7 +50,7 @@ class ActiveRoleClient(discord.Client):
         for member in role.members:
             if member.id not in active_user_ids and not member.bot:
                 try:
-                    await member.remove_roles(role, reason="Not active within the last 7 days")
+                    await member.remove_roles(role, reason=f"Not active within the last {ACTIVE_LOOKBACK_DAYS} days")
                 except discord.Forbidden:
                     self.failed = True
 
@@ -64,7 +64,7 @@ class ActiveRoleClient(discord.Client):
                 continue
 
             try:
-                await member.add_roles(role, reason="Active within the last 7 days")
+                await member.add_roles(role, reason=f"Active within the last {ACTIVE_LOOKBACK_DAYS} days")
             except discord.Forbidden:
                 self.failed = True
 
