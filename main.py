@@ -47,6 +47,13 @@ class ActiveRoleClient(discord.Client):
         since = datetime.now(UTC) - timedelta(days=ACTIVE_LOOKBACK_DAYS)
         active_user_ids = await self.collect_active_user_ids(guild, since)
 
+        for member in role.members:
+            if member.id not in active_user_ids and not member.bot:
+                try:
+                    await member.remove_roles(role, reason=f"Not active within the last {ACTIVE_LOOKBACK_DAYS} days")
+                except discord.Forbidden:
+                    self.failed = True
+
         for user_id in sorted(active_user_ids):
             try:
                 member = guild.get_member(user_id) or await guild.fetch_member(user_id)
@@ -57,7 +64,7 @@ class ActiveRoleClient(discord.Client):
                 continue
 
             try:
-                await member.add_roles(role, reason="Active within the last 7 days")
+                await member.add_roles(role, reason=f"Active within the last {ACTIVE_LOOKBACK_DAYS} days")
             except discord.Forbidden:
                 self.failed = True
 
@@ -75,7 +82,7 @@ class ActiveRoleClient(discord.Client):
                     if message.author.bot:
                         continue
                     active_user_ids.add(message.author.id)
-            except discord.Forbidden, discord.HTTPException:
+            except (discord.Forbidden, discord.HTTPException):
                 continue
 
         return active_user_ids
