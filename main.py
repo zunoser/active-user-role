@@ -1,21 +1,31 @@
-import os
 from datetime import UTC, datetime, timedelta
 
 import discord
+from pydantic import SecretStr, ValidationError
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-TARGET_GUILD_ID = 1422820164147085316
-ACTIVE_ROLE_ID = 1518619420942143498
+class Settings(BaseSettings):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-ACTIVE_LOOKBACK_DAYS = 14
+    model_config = SettingsConfigDict(env_file=".env")
+
+    discord_token: SecretStr
+    target_guild_id: int = 1422820164147085316
+    active_role_id: int = 1518619420942143498
+    active_lookback_days: int = 14
 
 
 class ActiveRoleClient(discord.Client):
-    def __init__(self) -> None:
+    def __init__(self, guild_id: int, role_id: int, lookback_days: int) -> None:
         intents = discord.Intents.default()
         intents.guilds = True
         intents.members = True
         super().__init__(intents=intents)
+        self.guild_id = guild_id
+        self.role_id = role_id
+        self.lookback_days = lookback_days
         self._task_started = False
         self.failed = False
 
@@ -35,16 +45,17 @@ class ActiveRoleClient(discord.Client):
             await self.close()
 
     async def assign_active_role(self) -> None:
-        guild = self.get_guild(TARGET_GUILD_ID)
+        guild = self.get_guild(self.guild_id)
         if guild is None:
-            guild = await self.fetch_guild(TARGET_GUILD_ID)
+            guild = await self.fetch_guild(self.guild_id)
 
-        role = guild.get_role(ACTIVE_ROLE_ID)
+        role = guild.get_role(self.role_id)
         if role is None:
             self.failed = True
             return
 
-        since = datetime.now(UTC) - timedelta(days=ACTIVE_LOOKBACK_DAYS)
+        lookback_days = self.lookback_days
+        since = datetime.now(UTC) - timedelta(days=lookback_days)
         active_user_ids = await self.collect_active_user_ids(guild, since)
 
         for member in role.members:
@@ -52,7 +63,7 @@ class ActiveRoleClient(discord.Client):
                 try:
                     await member.remove_roles(
                         role,
-                        reason=f"Not active within the last {ACTIVE_LOOKBACK_DAYS} days",
+                        reason=f"Not active within the last {lookback_days} days",
                     )
                 except discord.Forbidden:
                     self.failed = True
@@ -68,7 +79,7 @@ class ActiveRoleClient(discord.Client):
 
             try:
                 await member.add_roles(
-                    role, reason=f"Active within the last {ACTIVE_LOOKBACK_DAYS} days"
+                    role, reason=f"Active within the last {lookback_days} days"
                 )
             except discord.Forbidden:
                 self.failed = True
@@ -94,13 +105,18 @@ class ActiveRoleClient(discord.Client):
 
 
 def main() -> None:
-    token = os.environ.get("DISCORD_TOKEN")
-    if not token:
-        raise SystemExit(1)
-
-    client = ActiveRoleClient()
     try:
-        client.run(token, log_handler=None)
+        settings = Settings()
+    except ValidationError:
+        raise SystemExit(1) from None
+
+    client = ActiveRoleClient(
+        guild_id=settings.target_guild_id,
+        role_id=settings.active_role_id,
+        lookback_days=settings.active_lookback_days,
+    )
+    try:
+        client.run(token=settings.discord_token.get_secret_value(), log_handler=None)
     except Exception:
         raise SystemExit(1) from None
 
