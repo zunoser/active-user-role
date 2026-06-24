@@ -26,8 +26,6 @@ async def collect_active_user_ids(guild: discord.Guild, since: datetime) -> set[
         if not channel.permissions_for(guild.me).read_message_history:
             continue
         async for message in channel.history(after=since, oldest_first=False):
-            if message.author.bot:
-                continue
             active_user_ids.add(message.author.id)
 
     return active_user_ids
@@ -53,8 +51,9 @@ async def main() -> None:
             raise RuntimeError(f"Role {settings.active_role_id} not found")
 
         since = datetime.now(UTC) - timedelta(days=settings.active_lookback_days)
-        active_ids = await collect_active_user_ids(guild, since)
-        current_ids = {member.id for member in role.members if not member.bot}
+        bot_ids = {member.id for member in guild.members if member.bot}
+        active_ids = await collect_active_user_ids(guild, since) - bot_ids
+        current_ids = {member.id for member in role.members}
 
         for user_id in current_ids - active_ids:
             member = guild.get_member(user_id)
