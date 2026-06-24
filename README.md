@@ -1,7 +1,7 @@
 # active-user-role
 
 Discord.py bot that assigns an existing active role to users who posted in the
-target server within the last 7 days.
+target server within the last 14 days.
 
 Activity is detected from messages in:
 
@@ -32,9 +32,20 @@ uv run python main.py
 The bot intentionally does not write progress logs, counts, channel names, user
 IDs, role IDs, or exception details to stdout/stderr.
 
+## Checks
+
+```sh
+uv run ruff format --check .
+uv run ruff check .
+uv run ty check .
+pnpm run format:check
+```
+
 ## GitHub Actions
 
 The workflow is defined in `.github/workflows/active-role.yml`.
+
+CI checks are defined in `.github/workflows/ci.yml`.
 
 Set this repository secret:
 
