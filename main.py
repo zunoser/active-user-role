@@ -50,7 +50,10 @@ class ActiveRoleClient(discord.Client):
         for member in role.members:
             if member.id not in active_user_ids and not member.bot:
                 try:
-                    await member.remove_roles(role, reason=f"Not active within the last {ACTIVE_LOOKBACK_DAYS} days")
+                    await member.remove_roles(
+                        role,
+                        reason=f"Not active within the last {ACTIVE_LOOKBACK_DAYS} days",
+                    )
                 except discord.Forbidden:
                     self.failed = True
 
@@ -64,7 +67,9 @@ class ActiveRoleClient(discord.Client):
                 continue
 
             try:
-                await member.add_roles(role, reason=f"Active within the last {ACTIVE_LOOKBACK_DAYS} days")
+                await member.add_roles(
+                    role, reason=f"Active within the last {ACTIVE_LOOKBACK_DAYS} days"
+                )
             except discord.Forbidden:
                 self.failed = True
 
@@ -82,7 +87,7 @@ class ActiveRoleClient(discord.Client):
                     if message.author.bot:
                         continue
                     active_user_ids.add(message.author.id)
-            except (discord.Forbidden, discord.HTTPException):
+            except discord.Forbidden, discord.HTTPException:
                 continue
 
         return active_user_ids

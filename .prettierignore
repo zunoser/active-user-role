@@ -1,0 +1,7 @@
+node_modules/
+.venv/
+.ruff_cache/
+__pycache__/
+pnpm-lock.yaml
+uv.lock
+flake.lock

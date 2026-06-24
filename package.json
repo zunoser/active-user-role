@@ -1,0 +1,18 @@
+{
+  "name": "active-user-role",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "format": "pnpm run format:toml && pnpm run format:text",
+    "format:check": "pnpm run format:toml:check && pnpm run format:text:check",
+    "format:toml": "taplo format pyproject.toml",
+    "format:toml:check": "taplo format --check pyproject.toml",
+    "format:text": "prettier --write \"**/*.{json,jsonc,md,yml,yaml}\" \".vscode/*.json\"",
+    "format:text:check": "prettier --check \"**/*.{json,jsonc,md,yml,yaml}\" \".vscode/*.json\""
+  },
+  "devDependencies": {
+    "@taplo/cli": "0.7.0",
+    "prettier": "3.8.4"
+  }
+}

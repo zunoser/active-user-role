@@ -1,3 +1,6 @@
 .env
 __pycache__/
 .envrc
+.ruff_cache/
+.venv/
+node_modules/
