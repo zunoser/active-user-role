@@ -1,5 +1,6 @@
 import asyncio
 from datetime import UTC, datetime, timedelta
+from typing import AsyncIterator
 
 import discord
 from pydantic import SecretStr
@@ -18,17 +19,21 @@ class Settings(BaseSettings):
         super().__init__(**kwargs)
 
 
-async def collect_active_user_ids(guild: discord.Guild, since: datetime) -> set[int]:
-    active_user_ids: set[int] = set()
-    channels = [*guild.text_channels, *guild.voice_channels]
+async def all_history(
+    guild: discord.Guild,
+    since: datetime,
+) -> AsyncIterator[discord.Message]:
+    channels = [
+        *guild.text_channels,
+        *guild.voice_channels,
+        *[thread for channel in guild.text_channels for thread in channel.threads],
+    ]
 
     for channel in channels:
         if not channel.permissions_for(guild.me).read_message_history:
             continue
-        async for message in channel.history(after=since, oldest_first=False):
-            active_user_ids.add(message.author.id)
-
-    return active_user_ids
+        async for message in channel.history(after=since, limit=None):
+            yield message
 
 
 async def main() -> None:
@@ -51,19 +56,29 @@ async def main() -> None:
             raise RuntimeError(f"Role {settings.active_role_id} not found")
 
         since = datetime.now(UTC) - timedelta(days=settings.active_lookback_days)
-        bot_ids = {member.id for member in guild.members if member.bot}
-        active_ids = await collect_active_user_ids(guild, since) - bot_ids
-        current_ids = {member.id for member in role.members}
+        recent_messages = [message async for message in all_history(guild, since)]
+        active_user_ids = {
+            message.author.id for message in recent_messages if not message.author.bot
+        }
+        current_role_member_ids = {member.id for member in role.members}
 
-        for user_id in current_ids - active_ids:
+        diff = len(active_user_ids) - len(current_role_member_ids)
+        print(f"[INFO] Messages in the last: {len(recent_messages)}")
+        print(f"[INFO] Active users: {len(active_user_ids)} ({diff:+})")
+
+        for user_id in current_role_member_ids - active_user_ids:
             member = guild.get_member(user_id)
-            if member is not None:
+            if member is None:
+                print("[WARN] Member not found")
+            else:
                 reason = f"No activity in the last {settings.active_lookback_days} days"
                 await member.remove_roles(role, reason=reason)
 
-        for user_id in active_ids - current_ids:
+        for user_id in active_user_ids - current_role_member_ids:
             member = guild.get_member(user_id)
-            if member is not None:
+            if member is None:
+                print("[WARN] Member not found")
+            else:
                 reason = f"Active in the last {settings.active_lookback_days} days"
                 await member.add_roles(role, reason=reason)
 
