@@ -69,7 +69,7 @@ async def main() -> None:
         for user_id in current_role_member_ids - active_user_ids:
             member = guild.get_member(user_id)
             if member is None:
-                print(f"[WARN] Member {user_id} not found")
+                print("[WARN] Member not found")
             else:
                 reason = f"No activity in the last {settings.active_lookback_days} days"
                 await member.remove_roles(role, reason=reason)
@@ -77,7 +77,7 @@ async def main() -> None:
         for user_id in active_user_ids - current_role_member_ids:
             member = guild.get_member(user_id)
             if member is None:
-                print(f"[WARN] Member {user_id} not found")
+                print("[WARN] Member not found")
             else:
                 reason = f"Active in the last {settings.active_lookback_days} days"
                 await member.add_roles(role, reason=reason)
